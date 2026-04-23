@@ -6,12 +6,14 @@
   <title>Sakura Kitchen — AR Menu</title>
   <meta name="description" content="Interactive AR menu for Sakura Kitchen — authentic Japanese cuisine with 3D dish previews." />
 
+  <!-- ✅ PERFORMANCE: Preconnect to all CDNs before browser parses JS -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" />
 
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
 
+  <!-- ✅ PERFORMANCE: Async module — doesn't block page render -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
   <style>
@@ -41,6 +43,7 @@
       min-height: 100svh;
     }
 
+    /* ── HEADER ─────────────────────────────────────── */
     .site-header {
       background: var(--ink);
       color: #fff;
@@ -73,6 +76,7 @@
     .ar-dot { width:7px; height:7px; border-radius:50%; background:#e74c3c; flex-shrink:0; animation: pulse 1.6s ease-in-out infinite; }
     @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.35;transform:scale(0.8)} }
 
+    /* ── LANGUAGE PICKER ─────────────────────────────── */
     #language-picker { position:relative; z-index:10; margin-bottom:16px; }
     #lang-select {
       background: rgba(255,255,255,0.1); color: white;
@@ -82,6 +86,7 @@
     }
     #lang-select option { background: #1a1208; color: white; }
 
+    /* ── STICKY TABS ─────────────────────────────────── */
     .tabs-wrap {
       position: sticky; top: 0; z-index: 100;
       background: var(--paper); border-bottom: 1px solid var(--border); padding: 0 1rem;
@@ -100,6 +105,7 @@
     .tab-btn:hover { border-color: var(--border-md); color: var(--ink); }
     .tab-btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
 
+    /* ── MAIN ────────────────────────────────────────── */
     .main { max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
 
     .state-box { text-align: center; padding: 4rem 1rem; color: var(--muted); }
@@ -118,6 +124,7 @@
     }
     .section-label span { flex: 1; height: 1px; background: var(--border); }
 
+    /* ── CARDS ───────────────────────────────────────── */
     .items-grid { display: flex; flex-direction: column; gap: 10px; }
 
     .menu-card {
@@ -133,10 +140,7 @@
       width: 64px; height: 64px; flex-shrink: 0; border-radius: 10px;
       background: linear-gradient(135deg, #f5ead6 0%, #e8d5b0 100%);
       border: 1px solid var(--border); display: flex; align-items: center;
-      justify-content: center; font-size: 30px; position: relative; overflow: hidden;
-    }
-    .card-thumb img {
-      width: 100%; height: 100%; object-fit: cover; border-radius: 9px; display: block;
+      justify-content: center; font-size: 30px; position: relative;
     }
     .ar-pill {
       position: absolute; bottom: 3px; right: 3px;
@@ -168,10 +172,12 @@
     .ar-btn:hover { opacity: 0.78; }
     .ar-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
 
+    /* ── MODAL ───────────────────────────────────────── */
     .modal-overlay {
       display: none; position: fixed; inset: 0;
       background: rgba(8,6,2,0.82); z-index: 9000;
       align-items: flex-end; justify-content: center; padding: 0;
+      /* ✅ HEAT FIX: removed backdrop-filter blur — very expensive on mobile GPU */
     }
     @media (min-width: 540px) { .modal-overlay { align-items: center; padding: 1.5rem; } }
     .modal-overlay.open { display: flex; }
@@ -186,12 +192,16 @@
     @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
     @keyframes fadeIn  { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
 
+    /* ── MODEL VIEWER WRAPPER ────────────────────────── */
     .modal-viewer-wrap {
       width: 100%; height: 300px;
       background: linear-gradient(160deg, #1c140a 0%, #2e2112 100%);
       border-radius: 20px 20px 0 0; position: relative; overflow: hidden;
     }
 
+    /* ✅ FIXED SCALE: model-viewer itself MUST NOT be resized by user.
+       touch-action: none  → disables pinch-zoom on the element entirely.
+       pointer-events on the slot disables wheel zoom on desktop too.      */
     model-viewer {
       display: block;
       width: 100%;
@@ -199,9 +209,42 @@
       background: transparent;
       --progress-bar-color: #b8860b;
       --progress-mask: transparent;
+      /* Disable pinch zoom / scroll zoom on the 3D viewer */
       touch-action: none;
     }
 
+    /* ── CUSTOM LOADING STATE inside modal viewer ─────── */
+    .mv-loading-overlay {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 10px;
+      background: linear-gradient(160deg, #1c140a 0%, #2e2112 100%);
+      z-index: 5; transition: opacity 0.4s ease; pointer-events: none;
+    }
+    .mv-loading-overlay.hidden { opacity: 0; }
+
+    .mv-loader-ring {
+      width: 40px; height: 40px;
+      border: 2px solid rgba(184,134,11,0.15);
+      border-top-color: #b8860b;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+
+    .mv-loader-bar-track {
+      width: 80px; height: 2px;
+      background: rgba(184,134,11,0.12); border-radius: 2px; overflow: hidden;
+    }
+    .mv-loader-bar-fill {
+      height: 100%; background: #b8860b; width: 0%;
+      border-radius: 2px; transition: width 0.2s ease;
+    }
+    .mv-loader-label {
+      font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase;
+      color: rgba(184,134,11,0.6);
+    }
+
+    /* ── AR READY BADGE inside viewer ──────────────────── */
     .mv-ar-badge {
       position: absolute; top: 10px; left: 50%; transform: translateX(-50%) translateY(-6px);
       background: rgba(26,18,8,0.92); border: 1px solid #b8860b;
@@ -209,6 +252,7 @@
       font-size: 9px; letter-spacing: 0.15em; color: #d4ae52;
       text-transform: uppercase; opacity: 0;
       transition: opacity 0.4s, transform 0.4s;
+      /* ✅ HEAT FIX: no backdrop-filter */
       pointer-events: none; z-index: 4; white-space: nowrap;
     }
     .mv-ar-badge.visible {
@@ -216,6 +260,8 @@
       transform: translateX(-50%) translateY(0);
     }
 
+    /* ── SCALE INFO CHIP ──────────────────────────────── */
+    /* Shows the real-world size so customers understand the portion */
     .scale-info {
       position: absolute; bottom: 10px; left: 50%;
       transform: translateX(-50%);
@@ -224,6 +270,7 @@
       border-radius: 12px; padding: 4px 12px;
       font-size: 9px; letter-spacing: 0.2em; color: rgba(255,255,255,0.5);
       text-transform: uppercase; white-space: nowrap;
+      /* ✅ HEAT FIX: no backdrop-filter */
       z-index: 4; pointer-events: none;
     }
 
@@ -251,6 +298,7 @@
     }
     .modal-price { font-family: 'Playfair Display', serif; font-size: 30px; }
 
+    /* ── FOOTER ──────────────────────────────────────── */
     .site-footer {
       text-align: center; padding: 1.5rem 1rem;
       font-size: 11px; letter-spacing: 1px;
@@ -262,6 +310,7 @@
 </head>
 <body>
 
+<!-- ═══════════════════ HEADER ═══════════════════════ -->
 <header class="site-header">
   <div id="language-picker">
     <select id="lang-select">
@@ -282,10 +331,12 @@
   </span>
 </header>
 
+<!-- ═══════════════════ TABS ════════════════════════ -->
 <nav class="tabs-wrap" aria-label="Menu categories">
   <div class="tabs-inner" id="tabs-inner"></div>
 </nav>
 
+<!-- ═══════════════════ MAIN ════════════════════════ -->
 <main class="main">
   <div class="state-box" id="loading-state">
     <div class="spinner"></div>
@@ -294,11 +345,16 @@
   <div id="items-container" style="display:none"></div>
 </main>
 
+<!-- ═══════════════════ MODAL ════════════════════════ -->
 <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-label="Dish detail">
   <div class="modal-card">
+
+    <!-- 3D Viewer area -->
     <div class="modal-viewer-wrap" id="modal-viewer-wrap">
       <button class="modal-close" id="modal-close" aria-label="Close">✕</button>
+      <!-- AR-ready badge — shown after model loads -->
       <div class="mv-ar-badge" id="mv-ar-badge">✦ AR Ready</div>
+      <!-- Scale info shown at bottom of viewer -->
       <div class="scale-info" id="scale-info">Actual portion size</div>
     </div>
 
@@ -315,56 +371,13 @@
   </div>
 </div>
 
+<!-- ═══════════════════ FOOTER ═══════════════════════ -->
 <footer class="site-footer">
   Tap any dish to view in 3D &nbsp;·&nbsp; Prices in ₹ &nbsp;·&nbsp; 🌿 Vegetarian friendly<br>
   <span style="opacity:0.5">AR requires a compatible mobile device · Model size reflects actual portion</span>
 </footer>
 
 <script>
-// ─────────────────────────────────────────────────────────────
-//  LOCAL ASSET MAP
-//  ▸ Maps each dish name (lowercase) to its local folder assets.
-//  ▸ Folder structure expected alongside this HTML file:
-//    3d-model/
-//      Agedashi-Tofu/Agedashi-Tofu.png  (.glb  .usdz)
-//      Edamame/Edamame.png              (.glb  .usdz)
-//      Gyoza/Gyoza.png                  (.glb  .usdz)
-//      Karaage/Karaage.png              (.glb  .usdz)
-//      Matcha-Ice-Cream/…
-//      Miso-Soup/…
-//      Ramen/…
-//      Salmon-Sashimi/…
-//      Takoyaki/…
-//      Tempura/…
-// ─────────────────────────────────────────────────────────────
-const LOCAL_ASSETS = {
-  'agedashi tofu':    { folder: 'Agedashi-Tofu',    file: 'Agedashi-Tofu'    },
-  'edamame':          { folder: 'Edamame',           file: 'Edamame'          },
-  'gyoza':            { folder: 'Gyoza',             file: 'Gyoza'            },
-  'karaage':          { folder: 'Karaage',           file: 'Karaage'          },
-  'matcha ice cream': { folder: 'Matcha-Ice-Cream',  file: 'Matcha-Ice-Cream' },
-  'miso soup':        { folder: 'Miso-Soup',         file: 'Miso-Soup'        },
-  'ramen':            { folder: 'Ramen',             file: 'Ramen'            },
-  'salmon sashimi':   { folder: 'Salmon-Sashimi',    file: 'Salmon-Sashimi'   },
-  'takoyaki':         { folder: 'Takoyaki',          file: 'Takoyaki'         },
-  'tempura':          { folder: 'Tempura',           file: 'Tempura'          },
-};
-
-// Base path — change this if your 3d-model folder lives elsewhere
-const ASSETS_BASE = '3d-model';
-
-function getLocalAssets(dishName) {
-  const key = (dishName || '').toLowerCase().trim();
-  const entry = LOCAL_ASSETS[key];
-  if (!entry) return { posterPath: '', glbPath: '' };
-  const base = `${ASSETS_BASE}/${entry.folder}/${entry.file}`;
-  return {
-    posterPath: `${base}.png`,
-    glbPath:    `${base}.glb`,
-    usdzPath:   `${base}.usdz`,
-  };
-}
-
 // ─────────────────────────────────────────────────────────────
 //  CONFIG
 // ─────────────────────────────────────────────────────────────
@@ -411,6 +424,9 @@ let rawRows        = [];
 let activeCategory = 'all';
 let currentLang    = 'en';
 
+// ─────────────────────────────────────────────────────────────
+//  iOS DETECTION (needed for ios-src / Quick Look)
+// ─────────────────────────────────────────────────────────────
 const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -444,8 +460,6 @@ function splitLine(line) {
 
 // ─────────────────────────────────────────────────────────────
 //  ROW → DISH
-//  ▸ poster_url / glb_url from the sheet are IGNORED.
-//  ▸ Local asset paths are derived from the dish name instead.
 // ─────────────────────────────────────────────────────────────
 function rowToDish(row) {
   const truthy = v => ['true','yes','1'].includes((v || '').toLowerCase());
@@ -454,9 +468,14 @@ function rowToDish(row) {
   const desc = row[`description${sfx}`] || row['description'] || '';
   const name = row[`name${sfx}`]        || row['name']        || '';
 
-  // ✅ Always resolve assets from local folder — sheet URLs ignored
-  const local = getLocalAssets(row['name'] || name);
+  const rawGlb    = (row['glb_url']     || '').trim();
+  const glbPath   = rawGlb ? decodeURIComponent(rawGlb) : '';
+  const rawPoster = (row['poster_url'] || '').trim();
+  const posterPath = rawPoster ? decodeURIComponent(rawPoster) : '';
 
+  // ✅ FIXED SCALE: all dishes locked to 0.5 — hardcoded, ignores sheet.
+  //    This guarantees customers always see the correct portion size.
+  //    Pinch zoom is also disabled at the model-viewer level.
   const FIXED_SCALE = 0.5;
 
   return {
@@ -470,11 +489,10 @@ function rowToDish(row) {
     dotd:      truthy(row['dish of the day'] || row['dotd']),
     isNew:     truthy(row['new']),
     available: truthy(row['available']),
-    glbPath:   local.glbPath,
-    usdzPath:  local.usdzPath,
-    posterPath: local.posterPath,
-    scale:     FIXED_SCALE,
-    emoji:     EMOJI_MAP[(row['name'] || '').toLowerCase()] || '🍽️',
+    glbPath,
+    posterPath,   // ← image shown on card + modal (no GPU)
+    scale:     FIXED_SCALE,   // ← always 0.5, never from sheet
+    emoji:    EMOJI_MAP[(row['name'] || '').toLowerCase()] || '🍽️',
   };
 }
 
@@ -515,12 +533,13 @@ function renderTabs() {
 const SVG_CUBE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`;
 
 function cardHTML(d) {
-  // ✅ Local PNG thumbnail — no external requests, loads instantly
-  const safeEmoji = d.emoji.codePointAt(0).toString(16);
+  // ✅ IMAGE thumbnail — no GPU, loads instantly
+  // Falls back to emoji if no poster_url in sheet
   const thumbContent = d.posterPath
-    ? `<img src="${d.posterPath}" alt="${d.name}" loading="lazy"
-          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
-        ><span style="display:none;font-size:30px;width:100%;height:100%;align-items:center;justify-content:center;">${d.emoji}</span>`
+    ? `<img src="${d.posterPath}" alt="${d.name}"
+          style="width:100%;height:100%;object-fit:cover;border-radius:9px;display:block;"
+          loading="lazy"
+          onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${d.emoji}',style:'font-size:30px'}))">`
     : `<span style="font-size:30px;">${d.emoji}</span>`;
 
   return `
@@ -571,6 +590,9 @@ function renderItems() {
 
 // ─────────────────────────────────────────────────────────────
 //  MODAL
+//  ▸ Opens with a PHOTO (zero GPU)
+//  ▸ "View in AR" button → ONLY THEN loads model-viewer + launches AR
+//  ▸ This means zero heating until customer explicitly wants AR
 // ─────────────────────────────────────────────────────────────
 function openModal(id) {
   const d = allDishes.find(x => x.id === id);
@@ -590,26 +612,26 @@ function openModal(id) {
   scaleInfo.textContent = '';
 
   const vw = document.getElementById('modal-viewer-wrap');
+  // Clear previous content
   vw.querySelectorAll('.modal-photo, model-viewer, .no-model, .mv-loading-overlay, .mv-ar-btn-wrap')
     .forEach(el => el.remove());
 
-  // ── STEP 1: Show local photo immediately ─────────────────
+  // ── STEP 1: Show photo immediately (no GPU at all) ────────
   const photoWrap = document.createElement('div');
   photoWrap.className = 'modal-photo';
   photoWrap.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:20px 20px 0 0;';
 
   if (d.posterPath) {
-    photoWrap.innerHTML = `
-      <img src="${d.posterPath}" alt="${d.name}"
-        style="width:100%;height:100%;object-fit:cover;"
-        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    photoWrap.innerHTML = `<img src="${d.posterPath}" alt="${d.name}"
+      style="width:100%;height:100%;object-fit:cover;"
+      onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
       <span style="display:none;font-size:80px;align-items:center;justify-content:center;width:100%;height:100%;">${d.emoji}</span>`;
   } else {
     photoWrap.innerHTML = `<span style="font-size:80px;">${d.emoji}</span>`;
   }
   vw.insertBefore(photoWrap, arBadge);
 
-  // ── STEP 2: AR button (only if local GLB exists) ──────────
+  // ── STEP 2: Show AR button over the photo (only if GLB exists) ──
   if (d.glbPath) {
     const arBtnWrap = document.createElement('div');
     arBtnWrap.className = 'mv-ar-btn-wrap';
@@ -629,6 +651,7 @@ function openModal(id) {
       </button>`;
     vw.insertBefore(arBtnWrap, arBadge);
 
+    // Tap → load model-viewer and immediately launch AR
     arBtnWrap.querySelector('.modal-ar-launch-btn').addEventListener('click', () => {
       loadModelAndAR(d, vw, arBadge, scaleInfo, arBtnWrap, photoWrap);
     });
@@ -638,17 +661,16 @@ function openModal(id) {
   document.body.style.overflow = 'hidden';
 }
 
-// ── Load 3D model + launch AR ────────────────────────────────
+// ── Load 3D model + launch AR (only called when user taps AR button) ──
 function loadModelAndAR(d, vw, arBadge, scaleInfo, arBtnWrap, photoWrap) {
+  // Swap button to loading state
   const btn = arBtnWrap.querySelector('.modal-ar-launch-btn');
   btn.disabled = true;
   btn.innerHTML = `<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(26,18,8,0.2);border-top-color:#1a1208;border-radius:50%;animation:spin 0.8s linear infinite;"></span> Loading…`;
 
   const mv = document.createElement('model-viewer');
   mv.setAttribute('src', d.glbPath);
-
-  // ✅ Use local .usdz for iOS Quick Look
-  if (isIOS && d.usdzPath) mv.setAttribute('ios-src', d.usdzPath);
+  if (isIOS) mv.setAttribute('ios-src', d.glbPath.replace(/\.glb$/i, '.usdz'));
 
   const s = d.scale.toFixed(6);
   mv.setAttribute('scale',             `${s} ${s} ${s}`);
@@ -667,12 +689,18 @@ function loadModelAndAR(d, vw, arBadge, scaleInfo, arBtnWrap, photoWrap) {
   mv.setAttribute('interaction-prompt','none');
   mv.setAttribute('loading',           'eager');
   mv.setAttribute('reveal',            'auto');
+  // ✅ INVISIBLE always — user never sees the 3D preview screen (Image 2).
+  //    Model loads silently behind the food photo.
+  //    The instant it's ready → AR camera opens directly. No intermediate screen.
   mv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;background:transparent;touch-action:none;z-index:-1;opacity:0;pointer-events:none;';
 
   vw.insertBefore(mv, arBadge);
 
   mv.addEventListener('load', () => {
+    // Ready — skip the 3D viewer screen entirely, go straight to AR
     mv.activateAR();
+
+    // If AR fails or user exits AR back to the app, restore the button
     mv.addEventListener('ar-status', (e) => {
       if (e.detail.status === 'failed' || e.detail.status === 'not-presenting') {
         btn.disabled = false;
@@ -690,21 +718,24 @@ function loadModelAndAR(d, vw, arBadge, scaleInfo, arBtnWrap, photoWrap) {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  CLOSE MODAL
+//  CLOSE MODAL — remove model-viewer to free memory
 // ─────────────────────────────────────────────────────────────
 function closeModal() {
+  // Pause any active model-viewer before removing
   const mvEl = document.querySelector('#modal-viewer-wrap model-viewer');
   if (mvEl && typeof mvEl.pause === 'function') mvEl.pause();
 
   document.getElementById('modal-overlay').classList.remove('open');
   document.body.style.overflow = '';
 
+  // Clean up all injected elements
   document.querySelectorAll('#modal-viewer-wrap .modal-photo, #modal-viewer-wrap model-viewer, #modal-viewer-wrap .mv-loading-overlay, #modal-viewer-wrap .mv-ar-btn-wrap')
     .forEach(el => el.remove());
 
   document.getElementById('mv-ar-badge').classList.remove('visible');
 }
 
+// ✅ FIX 1: Also pause when app goes to background (user switches apps)
 document.addEventListener('visibilitychange', () => {
   const mvEl = document.querySelector('#modal-viewer-wrap model-viewer');
   if (!mvEl) return;
